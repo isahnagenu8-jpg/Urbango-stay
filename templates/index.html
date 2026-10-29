@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UrbanGo & Stay</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+    <header>
+        <div class="logo">
+            <span>⚡</span> UrbanGo & Stay
+        </div>
+        <div class="nav-tabs">
+            <button class="tab-btn active" onclick="switchTab('rides', this)">🚗 Rides</button>
+            <button class="tab-btn" onclick="switchTab('stays', this)">🏡 Stays</button>
+            <button class="tab-btn" onclick="switchTab('history', this); loadHistory();">📦 My Trips</button>
+        </div>
+        <div class="header-actions">
+            <button class="icon-btn" onclick="toggleTheme()" title="Toggle Theme">🌓</button>
+        </div>
+    </header>
+
+    <div class="main-container">
+        
+        <!-- RIDES VIEW -->
+        <div id="rides-view" class="view-section active">
+            <div class="card">
+                <h2>Request a Ride</h2>
+                <div class="input-group">
+                    <label>Pickup Location</label>
+                    <input type="text" id="pickup" value="Central Business District">
+                </div>
+                <div class="input-group">
+                    <label>Destination</label>
+                    <input type="text" id="dropoff" placeholder="Where would you like to go?">
+                </div>
+                
+                <label style="display:block; margin-bottom:0.5rem; font-weight:600; color:var(--text-muted); font-size:0.85rem;">Select Tier</label>
+                <div class="tier-selector">
+                    <div class="tier-card selected" onclick="selectTier('Comfort', 14.50, this)">
+                        <h4>Comfort</h4>
+                        <p>$14.50</p>
+                    </div>
+                    <div class="tier-card" onclick="selectTier('Green EV', 11.00, this)">
+                        <h4>Green EV</h4>
+                        <p>$11.00</p>
+                    </div>
+                    <div class="tier-card" onclick="selectTier('Black Luxe', 28.00, this)">
+                        <h4>Luxe</h4>
+                        <p>$28.00</p>
+                    </div>
+                </div>
+
+                <button class="btn-primary" onclick="bookRide()">Confirm & Find Driver</button>
+            </div>
+            
+            <div class="preview-screen">
+                <h3>Live Radar Map</h3>
+                <p id="ride-status-text">Ready to dispatch nearby drivers...</p>
+            </div>
+        </div>
+
+        <!-- STAYS VIEW -->
+        <div id="stays-view" class="view-section">
+            <div class="card" style="grid-column: span 2;">
+                <h2>Explore Featured Properties</h2>
+                <div class="stays-grid">
+                    <div class="stay-card" onclick="bookStay('Modern Skyline Loft', 120)">
+                        <div class="stay-img">🏙️ Loft View</div>
+                        <div class="stay-info">
+                            <h4>Modern Skyline Loft</h4>
+                            <p>2 Guests • Downtown</p>
+                            <span class="price">$120 / night</span>
+                        </div>
+                    </div>
+                    <div class="stay-card" onclick="bookStay('Cozy Beachfront Villa', 210)">
+                        <div class="stay-img">🌊 Beach View</div>
+                        <div class="stay-info">
+                            <h4>Cozy Beachfront Villa</h4>
+                            <p>4 Guests • Coastline</p>
+                            <span class="price">$210 / night</span>
+                        </div>
+                    </div>
+                    <div class="stay-card" onclick="bookStay('Mountain Pine Cabin', 95)">
+                        <div class="stay-img">🌲 Cabin View</div>
+                        <div class="stay-info">
+                            <h4>Mountain Pine Cabin</h4>
+                            <p>3 Guests • Pine Ridge</p>
+                            <span class="price">$95 / night</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- HISTORY VIEW -->
+        <div id="history-view" class="view-section">
+            <div class="card" style="grid-column: span 2;">
+                <h2>Your Bookings & Trips</h2>
+                <div id="bookings-container" class="bookings-list">
+                    <p style="color:var(--text-muted)">Loading your activity...</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let selectedRideTier = { name: "Comfort", price: 14.50 };
+
+        function switchTab(tab, btn) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+            
+            btn.classList.add('active');
+            document.getElementById(tab + '-view').classList.add('active');
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const current = html.getAttribute('data-theme');
+            html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+        }
+
+        function selectTier(name, price, element) {
+            document.querySelectorAll('.tier-card').forEach(c => c.classList.remove('selected'));
+            element.classList.add('selected');
+            selectedRideTier = { name, price };
+        }
+
+        function bookRide() {
+            const pickup = document.getElementById('pickup').value;
+            const dropoff = document.getElementById('dropoff').value || "Downtown Arena";
+            
+            document.getElementById('ride-status-text').innerHTML = `🔄 Connecting with nearby <b>${selectedRideTier.name}</b> driver...`;
+
+            fetch('/api/book', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'Ride',
+                    title: `${pickup} ➔ ${dropoff} (${selectedRideTier.name})`,
+                    price: `$${selectedRideTier.price.toFixed(2)}`
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                setTimeout(() => {
+                    document.getElementById('ride-status-text').innerHTML = `✅ Driver Assigned! On their way to pick you up.`;
+                    alert('Ride successfully booked! Check "My Trips" tab to view details.');
+                }, 1200);
+            });
+        }
+
+        function bookStay(title, pricePerNight) {
+            if(!confirm(`Would you like to reserve "${title}" for $${pricePerNight}/night?`)) return;
+
+            fetch('/api/book', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'Stay',
+                    title: title,
+                    price: `$${pricePerNight} / night`
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                alert('Airbnb reservation confirmed! Check "My Trips" tab.');
+            });
+        }
+
+        function loadHistory() {
+            fetch('/api/bookings')
+            .then(res => res.json())
+            .then(data => {
+                const container = document.getElementById('bookings-container');
+                if(data.length === 0) {
+                    container.innerHTML = `<p style="color:var(--text-muted)">No active bookings found. Book a ride or stay to see items here!</p>`;
+                    return;
+                }
+                
+                container.innerHTML = data.map(item => `
+                    <div class="booking-item">
+                        <div>
+                            <h4>[${item.type}] ${item.title}</h4>
+                            <p style="color:var(--text-muted); font-size:0.85rem;">Status: ${item.status}</p>
+                        </div>
+                        <div style="font-weight:700; color:var(--primary);">${item.price}</div>
+                    </div>
+                `).join('');
+            });
+        }
+    </script>
+</body>
+</html>
